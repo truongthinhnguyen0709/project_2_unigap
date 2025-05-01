@@ -1,0 +1,125 @@
+import csv
+import json
+import html
+import time
+import os
+import re
+import requests
+from concurrent.futures import ThreadPoolExecutor
+
+def download_and_extract_product_info_sync(product_id, output_dir):
+    """Downloads product info synchronously and saves to a JSON file."""
+    api_url = f"https://api.tiki.vn/product-detail/api/v1/products/{product_id}"
+    filename = os.path.join(output_dir, f"product_detail_{product_id}_sync_threaded.json")
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9,vi;q=0.8',
+    }
+    try:
+        response = requests.get(api_url, headers=headers, timeout=10)  # Thêm timeout để tránh bị treo
+        response.raise_for_status()
+        data = response.json()
+
+        description_html = data.get("description", "")
+        description_unescaped = html.unescape(description_html)
+
+        product_info = {
+            "id": data.get("id"),
+            "name": data.get("name"),
+            "url_key": data.get("url_key"),
+            "price": data.get("price"),
+            "description": description_unescaped,
+            "image_urls": [image.get("base_url") for image in data.get("images", []) if image.get("base_url")]
+        }
+
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(product_info, f, ensure_ascii=False, indent=4)
+        print(f"ID: {product_id}, Status: {response.status_code} (Threaded)")
+        return True
+
+    except requests.exceptions.RequestException as e:
+        print(f"Lỗi HTTP cho ID {product_id} (Threaded): {e}")
+        return False
+    except json.JSONDecodeError as e:
+        print(f"Lỗi JSON cho ID {product_id} (Threaded): {e}")
+        return False
+    except IOError as e:
+        print(f"Lỗi IO cho ID {product_id} (Threaded): {e}")
+        return False
+    except Exception as e:
+        print(f"Lỗi không xác định cho ID {product_id} (Threaded): {e}")
+        return False
+
+def process_product_ids_parallel(product_ids, output_dir, max_workers=5):
+    """Processes a list of product IDs in parallel using threads."""
+    successful_downloads = 0
+    failed_downloads = 0
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(download_and_extract_product_info_sync, pid, output_dir) for pid in product_ids]
+        for future in futures:
+            if future.result():
+                successful_downloads += 1
+            else:
+                failed_downloads += 1
+    print(f"  Đã tải thành công (threaded): {successful_downloads}/{len(product_ids)}")
+    print(f"  Lỗi (threaded): {failed_downloads}/{len(product_ids)}")
+
+def process_csv_file_parallel(csv_filepath, output_root_dir="tiki_product_details_by_file_threaded", id_column="id", max_workers=5):
+    """Reads all product IDs from a CSV file and processes them in parallel using threads."""
+    try:
+        with open(csv_filepath, 'r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            product_ids = [row[id_column] for row in reader if id_column in row]
+            total_products = len(product_ids)
+            print(f"Bắt đầu xử lý {total_products} sản phẩm (threaded) từ file: {csv_filepath}")
+
+            # Tạo thư mục đầu ra dựa trên tên file CSV
+            base_filename = os.path.splitext(os.path.basename(csv_filepath))[0]
+            output_dir = os.path.join(output_root_dir, base_filename)
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"Lưu kết quả vào thư mục: {output_dir}")
+
+            process_product_ids_parallel(product_ids, output_dir, max_workers=max_workers)
+
+            print(f"Hoàn tất xử lý file (threaded): {csv_filepath}.")
+
+    except FileNotFoundError:
+        print(f"Không tìm thấy file CSV: {csv_filepath}")
+    except KeyError:
+        print(f"Không tìm thấy cột '{id_column}' trong file CSV.")
+    except Exception as e:
+        print(f"Đã xảy ra lỗi khi xử lý file {csv_filepath} (threaded): {e}")
+
+def main_parallel():
+    input_directory = "split_product_id_files"  # Thay bằng thư mục chứa các file CSV của bạn
+    output_root_directory = "tiki_product_details_by_file_threaded"  # Thư mục gốc để lưu trữ kết quả
+    product_id_column = "id"  # Tên cột ID là "id"
+    max_workers = 10  # Số lượng thread tối đa chạy song song
+
+    if not os.path.exists(input_directory):
+        print(f"Không tìm thấy thư mục chứa các file CSV: {input_directory}")
+    else:
+        csv_files = [f for f in os.listdir(input_directory) if f.startswith("products_") and f.endswith(".csv")]
+
+        def sort_key(filename):
+            match = re.search(r'products_(\d+)\.csv', filename)
+            if match:
+                return int(match.group(1))
+            return filename
+
+        csv_files.sort(key=sort_key)
+
+        total_files = len(csv_files)
+        print(f"Tìm thấy {total_files} file CSV cần xử lý theo thứ tự số trong thư mục: {input_directory}")
+
+        for i, csv_file in enumerate(csv_files):
+            csv_filepath = os.path.join(input_directory, csv_file)
+            print(f"\nĐang xử lý file thứ {i + 1}/{total_files}: {csv_filepath}")
+            process_csv_file_parallel(csv_filepath, output_root_directory, product_id_column, max_workers)
+            print(f"Hoàn tất xử lý file thứ {i + 1}: {csv_filepath}. Chuyển sang file tiếp theo.")
+
+        print("\nHoàn tất quá trình tải thông tin chi tiết sản phẩm từ tất cả các file CSV (threaded) theo thứ tự số.")
+
+if __name__ == "__main__":
+    main_parallel()
