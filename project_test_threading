@@ -8,7 +8,7 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 
 def download_and_extract_product_info_sync(product_id, output_dir):
-    """Downloads product info synchronously and saves to a JSON file."""
+    """Downloads product info and saves to a JSON file."""
     api_url = f"https://api.tiki.vn/product-detail/api/v1/products/{product_id}"
     filename = os.path.join(output_dir, f"product_detail_{product_id}_sync_threaded.json")
     headers = {
@@ -92,7 +92,7 @@ def process_csv_file_parallel(csv_filepath, output_root_dir="tiki_product_detail
         print(f"Đã xảy ra lỗi khi xử lý file {csv_filepath} (threaded): {e}")
 
 def main_parallel():
-    input_directory = "split_product_id_files"  # Thay bằng thư mục chứa các file CSV của bạn
+    input_directory = "split_product_id_files"  # Thay bằng thư mục chứa các file CSV
     output_root_directory = "tiki_product_details_by_file_threaded"  # Thư mục gốc để lưu trữ kết quả
     product_id_column = "id"  # Tên cột ID là "id"
     max_workers = 10  # Số lượng thread tối đa chạy song song
