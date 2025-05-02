@@ -8,5 +8,7 @@
 #Bước 3: Lưu các id thiếu và bị lỗi sang 1 file mới và tải lại
 * Tải về thành công thêm 18 id
 * Lỗi 404 với 1065 sản phẩm
+* Tổng cộng tải về thành công 198.935 sản phẩm
+
 
 
