@@ -1,5 +1,6 @@
 # project_2_unigap
-* Bước 1: Tách file csv tổng chứa 200.000 product id ra thành các file csv nhỏ hơn chứa 1000 product id code thực hiện được lưu trong tach_file_csv
+"Bước 1: Tách file csv tổng chứa 200.000 product id ra thành các file csv nhỏ hơn chứa 1000 product id code thực hiện được lưu trong tach_file_csv
+* Sử dụng code trong "tach_file_product_id_csv"
 
 #Bước 2: Sử dụng threading để gửi request đến api tiki 
 * Sử dụng code trong file "project_test_threading"
