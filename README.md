@@ -8,6 +8,8 @@
 * Lỗi tổng cộng: 1083 sản phẩm
 
 #Bước 3: Lưu các id thiếu và bị lỗi sang 1 file mới và tải lại
+* Sử dụng code trong "luu_id_sp.py" để lưu ra danh sách 198.917 các id đã tải về được
+* Sử dụng code trong 
 * Tải về thành công thêm 18 id
 * Lỗi 404 với 1065 sản phẩm
 * Tổng cộng tải về thành công 198.935 sản phẩm
